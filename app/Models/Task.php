@@ -21,17 +21,22 @@ class Task extends Model
 
     protected $casts = [
         'is_done' => 'boolean',
-        'due_at' => 'datetime',
+        'due_at'  => 'datetime',
     ];
 
     public function note(): BelongsTo
     {
-        return $this->belongsTo(Note::class, 'note_id', 'id');
+        return $this->belongsTo(Note::class);
     }
 
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
     }
-    // tu budú relácie
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable')
+            ->where('collection', 'attachment');
+    }
 }

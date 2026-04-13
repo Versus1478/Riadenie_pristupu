@@ -22,7 +22,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'avatar',
         'role',
-        'premium_until'
+        'premium_until',
     ];
 
     protected $hidden = [
@@ -34,8 +34,8 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
-            'premium_until' => 'datetime',
-            'password' => 'hashed',
+            'premium_until'     => 'datetime',
+            'password'          => 'hashed',
         ];
     }
 
@@ -46,19 +46,18 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function comments(): HasMany
     {
-        return $this->hasMany(Comment::class, 'user_id', 'id');
+        return $this->hasMany(Comment::class);
     }
 
     public function tasks(): HasManyThrough
     {
-        return $this->hasManyThrough(
-            Task::class,
-            Note::class,
-            'user_id', // Foreign key on the users table...
-            'note_id', // Foreign key on the tasks table...
-            'id', // Local key on the users table...
-            'id' // Local key on the notes table...
-        );
+        return $this->hasManyThrough(Task::class, Note::class);
+    }
+
+    public function profilePhoto(): MorphOne
+    {
+        return $this->morphOne(Attachment::class, 'attachable')
+            ->where('collection', 'profile_photo');
     }
 
     public function isAdmin(): bool
@@ -70,11 +69,4 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->premium_until !== null && $this->premium_until->isFuture();
     }
-
-    public function profilePhoto(): MorphOne
-    {
-        return $this->morphOne(Attachment::class, 'attachable')
-            ->where('collection', 'profile_photo');
-    }
-
 }

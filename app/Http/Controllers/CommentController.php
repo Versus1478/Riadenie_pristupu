@@ -10,9 +10,6 @@ use Illuminate\Http\Response;
 
 class CommentController extends Controller
 {
-    /**
-     * GET /notes/{note}/comments
-     */
     public function indexForNote(Note $note)
     {
         $this->authorize('viewAny', Comment::class);
@@ -22,23 +19,15 @@ class CommentController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        return response()->json([
-            'comments' => $comments,
-        ], Response::HTTP_OK);
+        return response()->json(['comments' => $comments], Response::HTTP_OK);
     }
 
-    /**
-     * GET /notes/{note}/tasks/{task}/comments
-     */
     public function indexForTask(Note $note, Task $task)
     {
         $this->authorize('viewAny', Comment::class);
 
-        // overíme že task patrí danej note
         if ($task->note_id !== $note->id) {
-            return response()->json([
-                'message' => 'Úloha nepatrí tejto poznámke.',
-            ], Response::HTTP_NOT_FOUND);
+            return response()->json(['message' => 'Úloha nepatrí tejto poznámke.'], Response::HTTP_NOT_FOUND);
         }
 
         $comments = $task->comments()
@@ -46,14 +35,9 @@ class CommentController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        return response()->json([
-            'comments' => $comments,
-        ], Response::HTTP_OK);
+        return response()->json(['comments' => $comments], Response::HTTP_OK);
     }
 
-    /**
-     * POST /notes/{note}/comments
-     */
     public function storeForNote(Request $request, Note $note)
     {
         $this->authorize('create', Comment::class);
@@ -73,17 +57,12 @@ class CommentController extends Controller
         ], Response::HTTP_CREATED);
     }
 
-    /**
-     * POST /notes/{note}/tasks/{task}/comments
-     */
     public function storeForTask(Request $request, Note $note, Task $task)
     {
         $this->authorize('create', Comment::class);
 
         if ($task->note_id !== $note->id) {
-            return response()->json([
-                'message' => 'Úloha nepatrí tejto poznámke.',
-            ], Response::HTTP_NOT_FOUND);
+            return response()->json(['message' => 'Úloha nepatrí tejto poznámke.'], Response::HTTP_NOT_FOUND);
         }
 
         $validated = $request->validate([
@@ -101,9 +80,6 @@ class CommentController extends Controller
         ], Response::HTTP_CREATED);
     }
 
-    /**
-     * PATCH /comments/{comment}
-     */
     public function update(Request $request, Comment $comment)
     {
         $this->authorize('update', $comment);
@@ -120,17 +96,12 @@ class CommentController extends Controller
         ], Response::HTTP_OK);
     }
 
-    /**
-     * DELETE /comments/{comment}
-     */
     public function destroy(Comment $comment)
     {
         $this->authorize('delete', $comment);
 
         $comment->delete();
 
-        return response()->json([
-            'message' => 'Komentár bol odstránený.',
-        ], Response::HTTP_OK);
+        return response()->json(['message' => 'Komentár bol odstránený.'], Response::HTTP_OK);
     }
 }

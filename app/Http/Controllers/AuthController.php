@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use DB;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Rules\Password;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -21,11 +24,11 @@ class AuthController extends Controller
             'password'   => ['required', 'confirmed', Password::min(12)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
-        $user = User::create([
+        $user  = User::create([
             'first_name' => $validated['first_name'],
             'last_name'  => $validated['last_name'],
             'email'      => $validated['email'],
-            'password'   => $validated['password'], // cast zahashuje heslo
+            'password'   => $validated['password'],
             'role'       => 'user',
         ]);
 
@@ -33,8 +36,8 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registrácia prebehla úspešne.',
-            'user' => $user,
-            'token' => $token,
+            'user'    => $user,
+            'token'   => $token,
         ], Response::HTTP_CREATED);
     }
 
@@ -48,24 +51,22 @@ class AuthController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
-            return response()->json([
-                'message' => 'Nesprávny email alebo heslo.',
-            ], Response::HTTP_UNAUTHORIZED);
+            return response()->json(['message' => 'Nesprávny email alebo heslo.'], Response::HTTP_UNAUTHORIZED);
         }
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'message' => 'Prihlásenie bolo úspešné.',
-            'user' => $user,
-            'token' => $token,
+            'user'    => $user,
+            'token'   => $token,
         ], Response::HTTP_OK);
     }
 
     public function me(Request $request)
     {
         return response()->json([
-            'user' => $request->user(),
+            'user'            => $request->user(),
             'active_sessions' => $request->user()->tokens()->count(),
         ], Response::HTTP_OK);
     }
@@ -74,97 +75,64 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'message' => 'Používateľ bol odhlásený z aktuálneho zariadenia.',
-        ], Response::HTTP_OK);
+        return response()->json(['message' => 'Používateľ bol odhlásený z aktuálneho zariadenia.'], Response::HTTP_OK);
     }
 
     public function logoutAll(Request $request)
     {
-        $user = $request->user();
+        $request->user()->tokens()->delete();
 
-        $user->tokens()->delete();
-
-        return response()->json([
-            'message' => 'Používateľ bol odhlásený zo všetkých zariadení.'
-        ], Response::HTTP_OK);
+        return response()->json(['message' => 'Používateľ bol odhlásený zo všetkých zariadení.'], Response::HTTP_OK);
     }
 
     public function changePassword(Request $request)
     {
         $validated = $request->validate([
             'current_password' => ['required'],
-            'password' => [
-                'required',
-                'confirmed',
-                Password::min(12)->letters()->mixedCase()->numbers()->symbols()
-            ],
+            'password'         => ['required', 'confirmed', Password::min(12)->letters()->mixedCase()->numbers()->symbols()],
         ]);
 
         $user = $request->user();
 
         if (!Hash::check($validated['current_password'], $user->password)) {
-            return response()->json([
-                'message' => 'Aktuálne heslo nie je správne.'
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return response()->json(['message' => 'Aktuálne heslo nie je správne.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $user->update([
-            'password' => $validated['password']
-        ]);
+        $user->update(['password' => $validated['password']]);
 
-        return response()->json([
-            'message' => 'Heslo bolo úspešne zmenené.'
-        ], Response::HTTP_OK);
-
+        return response()->json(['message' => 'Heslo bolo úspešne zmenené.'], Response::HTTP_OK);
     }
 
     public function updateProfile(Request $request)
     {
-        $user = $request->user();
-
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'min:2', 'max:128'],
             'last_name'  => ['required', 'string', 'min:2', 'max:128'],
         ]);
 
-        $user->update($validated);
+        $request->user()->update($validated);
 
         return response()->json([
             'message' => 'Profil bol aktualizovaný.',
-            'user' => $user
+            'user'    => $request->user(),
         ], Response::HTTP_OK);
     }
 
     public function uploadAvatar(Request $request)
     {
         $request->validate([
-            'avatar' => ['required', 'image', 'max:2048']
+            'avatar' => ['required', 'image', 'max:2048'],
         ]);
-
-        $user = $request->user();
 
         $path = $request->file('avatar')->store('avatars', 'public');
 
-        $user->update([
-            'avatar' => $path
-        ]);
+        $request->user()->update(['avatar' => $path]);
 
         return response()->json([
-            'message' => 'Avatar bol nahraný.',
-            'avatar_url' => asset('storage/' . $path)
-        ]);
+            'message'    => 'Avatar bol nahraný.',
+            'avatar_url' => asset('storage/' . $path),
+        ], Response::HTTP_OK);
     }
-//use App\Models\User;
-//use Illuminate\Http\Request;
-//use Illuminate\Http\Response;
-//use Illuminate\Support\Facades\DB;
-//use Illuminate\Support\Facades\Hash;
-//use Illuminate\Support\Facades\Storage;
-//use Illuminate\Support\Str;
-//use Illuminate\Validation\Rules\File;
-//use Illuminate\Validation\Rules\Password;
-//use Throwable;
 
     public function storeProfilePhoto(Request $request)
     {
@@ -172,31 +140,28 @@ class AuthController extends Controller
             'file' => ['required', File::image()->max('3mb')],
         ]);
 
-        $user = $request->user();
-        $file = $validated['file'];
-
-        $disk = 'public';
+        $user      = $request->user();
+        $file      = $validated['file'];
+        $disk      = 'public';
         $directory = 'profile_photos/users/' . $user->id;
-
-        $path = null;
+        $path      = null;
 
         try {
             DB::beginTransaction();
 
             $oldProfilePhoto = $user->profilePhoto;
-
-            $path = $file->store($directory, $disk);
+            $path            = $file->store($directory, $disk);
 
             $newPhoto = $user->profilePhoto()->create([
-                'public_id' => (string) Str::ulid(),
-                'collection' => 'profile_photo',
-                'visibility' => 'public',
-                'disk' => $disk,
-                'path' => $path,
-                'stored_name' => basename($path),
+                'public_id'     => (string) Str::ulid(),
+                'collection'    => 'profile_photo',
+                'visibility'    => 'public',
+                'disk'          => $disk,
+                'path'          => $path,
+                'stored_name'   => basename($path),
                 'original_name' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType(),
-                'size' => $file->getSize(),
+                'mime_type'     => $file->getMimeType(),
+                'size'          => $file->getSize(),
             ]);
 
             if ($oldProfilePhoto) {
@@ -212,14 +177,12 @@ class AuthController extends Controller
                 Storage::disk($disk)->delete($path);
             }
 
-            return response()->json([
-                'message' => 'Profilovú fotku sa nepodarilo uložiť.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return response()->json(['message' => 'Profilovú fotku sa nepodarilo uložiť.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return response()->json([
-            'message' => 'Profilová fotka bola uložená.',
-            'profile_photo' => $newPhoto,
+            'message'           => 'Profilová fotka bola uložená.',
+            'profile_photo'     => $newPhoto,
             'profile_photo_url' => $newPhoto->publicUrl(),
         ], Response::HTTP_CREATED);
     }

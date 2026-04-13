@@ -7,60 +7,44 @@ use App\Models\Note;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\File;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Throwable;
-use DB;
 
 class AttachmentController extends Controller
 {
-    use AuthorizesRequests;
-
-    /**
-     * Zoznam príloh pre poznámku
-     */
     public function indexForNote(Note $note)
     {
-        $this->authorize('viewAny', Attachment::class);
+        $this->authorize('view', $note);
 
-        $attachments = $note->attachments()
-            ->orderByDesc('created_at')
-            ->get();
+        $attachments = $note->attachments()->orderByDesc('created_at')->get();
 
         return response()->json(['attachments' => $attachments], Response::HTTP_OK);
     }
 
-    /**
-     * Zoznam príloh pre úlohu
-     */
     public function indexForTask(Note $note, Task $task)
     {
-        $this->authorize('viewAny', Attachment::class);
+        $this->authorize('view', $note);
 
         if ($task->note_id !== $note->id) {
             return response()->json(['message' => 'Úloha nepatrí tejto poznámke.'], Response::HTTP_NOT_FOUND);
         }
 
-        $attachments = $task->attachments()
-            ->orderByDesc('created_at')
-            ->get();
+        $attachments = $task->attachments()->orderByDesc('created_at')->get();
 
         return response()->json(['attachments' => $attachments], Response::HTTP_OK);
     }
 
-    /**
-     * Nahratie jednej prílohy k poznámke
-     */
     public function storeForNote(Request $request, Note $note)
     {
-        $this->authorize('create', Attachment::class);
+        $this->authorize('createAttachment', $note);
 
         $validated = $request->validate([
             'file' => [
                 'required',
-                File::types(['jpg','jpeg','png','gif','webp','pdf','doc','docx','txt','zip'])
+                File::types(['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'txt', 'zip'])
                     ->max('10mb'),
             ],
         ]);
@@ -68,43 +52,41 @@ class AttachmentController extends Controller
         $attachment = $this->processStore($validated['file'], $note, 'notes/' . $note->id);
 
         if (!$attachment) {
-            return response()->json(['message' => 'Chyba pri ukladaní.'], 500);
+            return response()->json(['message' => 'Chyba pri ukladaní.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return response()->json([
-            'message' => 'Príloha nahraná.',
+            'message'    => 'Príloha nahraná.',
             'attachment' => $attachment,
-            'url' => Storage::disk($attachment->disk)->url($attachment->path)
+            'url'        => Storage::disk($attachment->disk)->url($attachment->path),
         ], Response::HTTP_CREATED);
     }
 
-    /**
-     * Nahratie jednej prílohy k úlohe
-     */
     public function storeForTask(Request $request, Note $note, Task $task)
     {
-        $this->authorize('create', Attachment::class);
+        $this->authorize('createAttachment', $note);
 
         if ($task->note_id !== $note->id) {
             return response()->json(['message' => 'Úloha nepatrí tejto poznámke.'], Response::HTTP_NOT_FOUND);
         }
 
         $validated = $request->validate([
-            'file' => ['required', File::types(['jpg','jpeg','png','pdf'])->max('10mb')],
+            'file' => [
+                'required',
+                File::types(['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'txt', 'zip'])
+                    ->max('10mb'),
+            ],
         ]);
 
         $attachment = $this->processStore($validated['file'], $task, 'tasks/' . $task->id);
 
         if (!$attachment) {
-            return response()->json(['message' => 'Chyba pri ukladaní.'], 500);
+            return response()->json(['message' => 'Chyba pri ukladaní.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return response()->json(['attachment' => $attachment], Response::HTTP_CREATED);
     }
 
-    /**
-     * Vymazanie prílohy
-     */
     public function destroy(Attachment $attachment)
     {
         $this->authorize('delete', $attachment);
@@ -115,25 +97,19 @@ class AttachmentController extends Controller
         return response()->json(['message' => 'Príloha odstránená.'], Response::HTTP_OK);
     }
 
-    /**
-     * Vygenerovanie dočasného linku na stiahnutie (ak je disk private)
-     */
     public function link(Attachment $attachment)
     {
-        $this->authorize('viewAny', Attachment::class);
+        $this->authorize('view', $attachment);
 
         $expiresAt = now()->addMinutes(5);
-        $url = Storage::disk($attachment->disk)->temporaryUrl($attachment->path, $expiresAt);
+        $url       = Storage::disk($attachment->disk)->temporaryUrl($attachment->path, $expiresAt);
 
         return response()->json([
-            'url' => $url,
+            'url'        => $url,
             'expires_at' => $expiresAt->toIso8601String(),
         ], Response::HTTP_OK);
     }
 
-    /**
-     * Pomocná funkcia pre spracovanie súboru a DB zápis
-     */
     private function processStore($file, $model, string $directory): ?Attachment
     {
         $disk = 'public';
@@ -157,11 +133,15 @@ class AttachmentController extends Controller
             ]);
 
             DB::commit();
-            return $attachment;
 
+            return $attachment;
         } catch (Throwable $e) {
             DB::rollBack();
-            if ($path) Storage::disk($disk)->delete($path);
+
+            if ($path) {
+                Storage::disk($disk)->delete($path);
+            }
+
             return null;
         }
     }

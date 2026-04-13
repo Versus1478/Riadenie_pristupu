@@ -24,7 +24,6 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Categories
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}', [CategoryController::class, 'show']);
 
@@ -34,7 +33,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
     });
 
-    // Notes — špeciálne routes musia byť PRED apiResource
     Route::prefix('notes')->group(function () {
         Route::get('stats/status',                 [NoteController::class, 'statsByStatus']);
         Route::get('pinned',                       [NoteController::class, 'pinnedNotes']);
@@ -48,37 +46,28 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('{id}/publish', [NoteController::class, 'publish']);
     });
 
-    // Notes + Tasks CRUD
     Route::apiResource('notes', NoteController::class);
     Route::apiResource('notes.tasks', TaskController::class)->scoped();
 
-    // Komentáre k note
     Route::get( 'notes/{note}/comments', [CommentController::class, 'indexForNote']);
     Route::post('notes/{note}/comments', [CommentController::class, 'storeForNote']);
 
-    // Komentáre k tasku
     Route::get( 'notes/{note}/tasks/{task}/comments', [CommentController::class, 'indexForTask']);
     Route::post('notes/{note}/tasks/{task}/comments', [CommentController::class, 'storeForTask']);
 
-    // Úprava a zmazanie komentára
     Route::patch( 'comments/{comment}', [CommentController::class, 'update']);
     Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
 
-    // Prílohy k note
     Route::get( 'notes/{note}/attachments', [AttachmentController::class, 'indexForNote']);
     Route::post('notes/{note}/attachments', [AttachmentController::class, 'storeForNote']);
 
-    // Prílohy k tasku
     Route::get( 'notes/{note}/tasks/{task}/attachments', [AttachmentController::class, 'indexForTask']);
     Route::post('notes/{note}/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask']);
 
-    // Zmazanie prílohy
     Route::delete('attachments/{attachment}', [AttachmentController::class, 'destroy']);
 
-    // Získanie linku na stiahnutie prílohy
     Route::get('attachments/{attachment}/link', [AttachmentController::class, 'link']);
 
-    // User routes
     Route::prefix('users/{user}')->group(function () {
         Route::get('notes',         [NoteController::class, 'userNotesWithCategories']);
         Route::patch('notes/count', [NoteController::class, 'userNoteCount']);

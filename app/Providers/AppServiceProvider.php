@@ -15,22 +15,13 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
+    public function register(): void {}
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         Gate::policy(Note::class, NotePolicy::class);
-        Gate::policy(Comment::class, CommentPolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);
+        Gate::policy(Comment::class, CommentPolicy::class);
         Gate::policy(Attachment::class, AttachmentPolicy::class);
     }
 }

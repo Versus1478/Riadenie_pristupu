@@ -13,24 +13,21 @@ class TaskPolicy
         if ($user->isAdmin()) {
             return true;
         }
+
         return null;
     }
 
-    /**
-     * TaskPolicy prijíma Note ako druhý parameter, pretože tasky
-     * nemajú zmysel bez kontextu poznámky (oprávnenie = oprávnenie na note).
-     */
     public function view(User $user, Note $note): bool
     {
-        if ($note->status === 'published' || $note->status === 'archived') {
+        if (in_array($note->status, ['published', 'archived'])) {
             return true;
         }
+
         return $note->user_id === $user->id;
     }
 
     public function create(User $user, Note $note): bool
     {
-        // task môže pridať iba vlastník poznámky
         return $note->user_id === $user->id;
     }
 

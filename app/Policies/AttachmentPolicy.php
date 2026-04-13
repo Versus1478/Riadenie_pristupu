@@ -12,39 +12,48 @@ class AttachmentPolicy
         if ($user->isAdmin()) {
             return true;
         }
+
         return null;
     }
 
-    public function viewAny(User $user): bool
+    public function view(User $user, Attachment $attachment): bool
     {
-        return true;
-    }
+        $note = $this->resolveNote($attachment);
 
-    public function create(User $user): bool
-    {
-        return true;
+        if (!$note) {
+            return false;
+        }
+
+        if (in_array($note->status, ['published', 'archived'])) {
+            return true;
+        }
+
+        return $note->user_id === $user->id;
     }
 
     public function delete(User $user, Attachment $attachment): bool
     {
-        // vlastník attachable záznamu — overíme cez polymorfnú reláciu
+        $note = $this->resolveNote($attachment);
+
+        return $note && $note->user_id === $user->id;
+    }
+
+    private function resolveNote(Attachment $attachment): ?\App\Models\Note
+    {
         $attachable = $attachment->attachable;
 
         if (!$attachable) {
-            return false;
+            return null;
         }
 
-        // Note aj Task majú user_id cez note
-        if (method_exists($attachable, 'getKey')) {
-            if (isset($attachable->user_id)) {
-                return $attachable->user_id === $user->id;
-            }
-            // Task nemá priamo user_id — ideme cez note
-            if (isset($attachable->note_id)) {
-                return $attachable->note?->user_id === $user->id;
-            }
+        if ($attachable instanceof \App\Models\Note) {
+            return $attachable;
         }
 
-        return false;
+        if ($attachable instanceof \App\Models\Task) {
+            return $attachable->note;
+        }
+
+        return null;
     }
 }
