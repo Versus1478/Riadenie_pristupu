@@ -14,14 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function ($middleware) {
+    ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'admin' => AdminOnly::class,
+            'admin'   => AdminOnly::class,
             'premium' => PremiumOnly::class,
         ]);
-    })
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
     })
     ->withExceptions(function ($exceptions) {
         $exceptions->render(function (AccessDeniedHttpException $e, $request) {
