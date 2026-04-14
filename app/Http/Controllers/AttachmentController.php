@@ -102,7 +102,7 @@ class AttachmentController extends Controller
         $this->authorize('view', $attachment);
 
         $expiresAt = now()->addMinutes(5);
-        $url       = Storage::disk($attachment->disk)->temporaryUrl($attachment->path, $expiresAt);
+        $url = Storage::disk($attachment->disk)->url($attachment->path);
 
         return response()->json([
             'url'        => $url,
