@@ -3,6 +3,8 @@
 namespace App\Policies;
 
 use App\Models\Attachment;
+use App\Models\Note;
+use App\Models\Task;
 use App\Models\User;
 
 class AttachmentPolicy
@@ -38,7 +40,7 @@ class AttachmentPolicy
         return $note && $note->user_id === $user->id;
     }
 
-    private function resolveNote(Attachment $attachment): ?\App\Models\Note
+    private function resolveNote(Attachment $attachment): ?Note
     {
         $attachable = $attachment->attachable;
 
@@ -46,11 +48,11 @@ class AttachmentPolicy
             return null;
         }
 
-        if ($attachable instanceof \App\Models\Note) {
+        if ($attachable instanceof Note) {
             return $attachable;
         }
 
-        if ($attachable instanceof \App\Models\Task) {
+        if ($attachable instanceof Task) {
             return $attachable->note;
         }
 
