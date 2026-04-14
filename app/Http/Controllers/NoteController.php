@@ -102,43 +102,33 @@ class NoteController extends Controller
         return response()->json(['message' => 'Poznámka bola úspešne odstránená.'], Response::HTTP_OK);
     }
 
-
     public function pin(Note $note)
     {
         $this->authorize('pin', $note);
-
         $note->pin();
-
         return response()->json(['message' => 'Poznámka bola pripnutá.', 'note' => $note]);
     }
 
     public function unpin(Note $note)
     {
         $this->authorize('pin', $note);
-
         $note->unpin();
-
         return response()->json(['message' => 'Poznámka bola odopnutá.', 'note' => $note]);
     }
 
     public function archive(Note $note)
     {
         $this->authorize('archive', $note);
-
         $note->archive();
-
         return response()->json(['message' => 'Poznámka bola archivovaná.', 'note' => $note], Response::HTTP_OK);
     }
 
     public function publish(Note $note)
     {
         $this->authorize('publish', $note);
-
         $note->publish();
-
         return response()->json(['message' => 'Poznámka bola publikovaná.', 'note' => $note], Response::HTTP_OK);
     }
-
 
     public function statsByStatus()
     {
@@ -197,11 +187,16 @@ class NoteController extends Controller
         return response()->json(['notes' => $notes], Response::HTTP_OK);
     }
 
-    // --- User-specific akcie ---
+    private function checkUserAccess(string $userId): void
+    {
+        if ((string) auth()->id() !== $userId && !auth()->user()->isAdmin()) {
+            abort(403, 'Nemáte oprávnenie na zobrazenie týchto dát.');
+        }
+    }
 
     public function userNotesWithCategories(string $userId)
     {
-        $this->authorize('viewAny', Note::class);
+        $this->checkUserAccess($userId);
 
         $notes = Note::with('categories')
             ->where('user_id', $userId)
@@ -218,7 +213,7 @@ class NoteController extends Controller
 
     public function userNoteCount(string $userId)
     {
-        $this->authorize('viewAny', Note::class);
+        $this->checkUserAccess($userId);
 
         $count = Note::countByUser($userId);
 
@@ -227,9 +222,13 @@ class NoteController extends Controller
 
     public function userDraftNotes(string $userId)
     {
-        $this->authorize('viewAny', Note::class);
+        $this->checkUserAccess($userId);
 
-        $notes = Note::user($userId)->draft()->orderByDesc('updated_at')->get();
+        $notes = Note::query()
+            ->user($userId)
+            ->draft()
+            ->orderByDesc('updated_at')
+            ->get();
 
         return response()->json(['notes' => $notes], Response::HTTP_OK);
     }
