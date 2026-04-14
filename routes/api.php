@@ -10,26 +10,26 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login',    [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::get('/me', [AuthController::class, 'me']);
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::post('/logout-all', [AuthController::class, 'logoutAll']);
-        Route::post('/avatar', [AuthController::class, 'uploadAvatar']);
+        Route::get('/me',                [AuthController::class, 'me']);
+        Route::post('/logout',           [AuthController::class, 'logout']);
+        Route::post('/logout-all',       [AuthController::class, 'logoutAll']);
+        Route::post('/avatar',           [AuthController::class, 'uploadAvatar']);
         Route::patch('/change-password', [AuthController::class, 'changePassword']);
-        Route::patch('/profile', [AuthController::class, 'updateProfile']);
+        Route::patch('/profile',         [AuthController::class, 'updateProfile']);
     });
 });
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('categories', [CategoryController::class, 'index']);
+    Route::get('categories',            [CategoryController::class, 'index']);
     Route::get('categories/{category}', [CategoryController::class, 'show']);
 
     Route::middleware('admin')->group(function () {
-        Route::post('categories', [CategoryController::class, 'store']);
-        Route::put('categories/{category}', [CategoryController::class, 'update']);
+        Route::post('categories',              [CategoryController::class, 'store']);
+        Route::put('categories/{category}',    [CategoryController::class, 'update']);
         Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
     });
 
@@ -40,33 +40,31 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('search',                       [NoteController::class, 'search']);
         Route::patch('actions/archive-old-drafts', [NoteController::class, 'archiveOldDrafts']);
 
-        Route::patch('{id}/pin',     [NoteController::class, 'pin']);
-        Route::patch('{id}/unpin',   [NoteController::class, 'unpin']);
-        Route::patch('{id}/archive', [NoteController::class, 'archive']);
-        Route::patch('{id}/publish', [NoteController::class, 'publish']);
+        Route::patch('{note}/pin',     [NoteController::class, 'pin']);
+        Route::patch('{note}/unpin',   [NoteController::class, 'unpin']);
+        Route::patch('{note}/archive', [NoteController::class, 'archive']);
+        Route::patch('{note}/publish', [NoteController::class, 'publish']);
     });
 
     Route::apiResource('notes', NoteController::class);
     Route::apiResource('notes.tasks', TaskController::class)->scoped();
 
-    Route::get( 'notes/{note}/comments', [CommentController::class, 'indexForNote']);
-    Route::post('notes/{note}/comments', [CommentController::class, 'storeForNote']);
-
+    Route::get( 'notes/{note}/comments',              [CommentController::class, 'indexForNote']);
+    Route::post('notes/{note}/comments',              [CommentController::class, 'storeForNote']);
     Route::get( 'notes/{note}/tasks/{task}/comments', [CommentController::class, 'indexForTask']);
     Route::post('notes/{note}/tasks/{task}/comments', [CommentController::class, 'storeForTask']);
+    Route::patch( 'comments/{comment}',               [CommentController::class, 'update']);
+    Route::delete('comments/{comment}',               [CommentController::class, 'destroy']);
 
-    Route::patch( 'comments/{comment}', [CommentController::class, 'update']);
-    Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
+    Route::get(   'notes/{note}/attachments',               [AttachmentController::class, 'indexForNote']);
+    Route::get(   'notes/{note}/tasks/{task}/attachments',  [AttachmentController::class, 'indexForTask']);
+    Route::delete('attachments/{attachment}',               [AttachmentController::class, 'destroy']);
+    Route::get(   'attachments/{attachment}/link',          [AttachmentController::class, 'link']);
 
-    Route::get( 'notes/{note}/attachments', [AttachmentController::class, 'indexForNote']);
-    Route::post('notes/{note}/attachments', [AttachmentController::class, 'storeForNote']);
-
-    Route::get( 'notes/{note}/tasks/{task}/attachments', [AttachmentController::class, 'indexForTask']);
-    Route::post('notes/{note}/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask']);
-
-    Route::delete('attachments/{attachment}', [AttachmentController::class, 'destroy']);
-
-    Route::get('attachments/{attachment}/link', [AttachmentController::class, 'link']);
+    Route::middleware('premium')->group(function () {
+        Route::post('notes/{note}/attachments',               [AttachmentController::class, 'storeForNote']);
+        Route::post('notes/{note}/tasks/{task}/attachments',  [AttachmentController::class, 'storeForTask']);
+    });
 
     Route::prefix('users/{user}')->group(function () {
         Route::get('notes',         [NoteController::class, 'userNotesWithCategories']);
@@ -74,7 +72,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('draft-notes',   [NoteController::class, 'userDraftNotes']);
     });
 
-    Route::middleware('verified')->get('/verified-check', function () {
-        return 'ok';
-    });
+    Route::middleware('verified')->get('/verified-check', fn() => response()->json(['message' => 'ok']));
 });
